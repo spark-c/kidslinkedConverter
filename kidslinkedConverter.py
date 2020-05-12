@@ -9,14 +9,14 @@
 
 # Format will be Company(0), Name(1), Email(2), Phone(3), Address(4)
 
-import re, pprint, pyperclip, logging, openpyxl, os
+import re, pprint, logging, openpyxl, os, sys
 
 logging.disable(logging.CRITICAL)
 
 logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
 
 
-def infoScrape(): # gonna use this function for each info block
+def infoScrape():
 
     i = 1
     for block in range(len(sourceDoc)):
@@ -147,7 +147,10 @@ def bigListDebugPrint(index = 'all'): # Default value for x is 0
 
 
 
-
+if not os.path.isfile('./clipboard.txt'):
+    input('Place text content into ./clipboard.txt\n***Press ENTER to exit***')
+    open('./clipboard.txt', 'a').close()
+    sys.exit()
 
 
 #DEFINITIONS
@@ -195,27 +198,36 @@ bigDict = {} # this is the main directory
 
 # Break the whole document into a giant list of blocks
 
-sourceDoc = pyperclip.paste()
+#sourceDoc = pyperclip.paste() ****************THIS DOES NOT WORK ON LINUX?????***************
+with open(r'./clipboard.txt', 'r') as f:
+    sourceDoc = f.read()
 
-sourceDoc = sourceDoc.split('\r\n\r\n')
+#sourceDoc = sourceDoc.split('\r#\n\r\n')
+sourceDoc = sourceDoc.split('\n\n')
 
 logging.debug('SOURCEDOC...\nSOURCEDOC...')
 logging.debug(pprint.pformat((sourceDoc)))
 
-# Now we proccess
+# Now we process
 
 infoScrape()
 
-print('Compiling complete.\nCall "bigDict" for content.')
+print('Compiling complete.\n')
 
 
 #bigListDebugPrint()
 
 #########EXCEL CODE BELOW
 
-desiredPath = input('Please enter desired path: ')
+while True:
+    try:
+        desiredPath = input('Please enter desired path: ')
+        os.chdir(desiredPath)
+        break
+    except:
+        print('Invalid path!')
+        continue
 
-os.chdir(desiredPath)
 
 wb = openpyxl.Workbook()
 sheet = wb['Sheet']
@@ -257,12 +269,23 @@ for Company in bigDict:
     rowIndex = rowIndex + rowsneeded # moves "cursor" to next empty row
     i += 1
 
+while True:
+    try:
+        filename = input('Enter filename: ')
+        if filename[-5:] != '.xlsx':
+            filename = filename + '.xlsx'
+        wb.save(filename)
+        break
+    except:
+        print('Invalid filename!')
+        continue
 
 
 
 
 
-wb.save(input('Enter filename: ') + '.xlsx') #could implement code to check whether '.xlsx' is already included
+
+
 
 
 
