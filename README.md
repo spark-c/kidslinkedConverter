@@ -13,5 +13,6 @@ REQUIREMENTS:
 
 USE:
 1. Use CTRL+A to select all of the text in the document.
+2. Use CTRL+C to copy the selected text to the clipboard.
 2. Run kidslinkedConverter.py (will convert to .exe in the future)
 3. When prompted, follow the on-screen instructions to enter the desired filename and path.
