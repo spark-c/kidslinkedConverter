@@ -2,6 +2,8 @@
 # Collin Sparks, created 11/9/2019
 # Python 3
 
+The first longer script I wrote; it's very messy in retrospect, but it still does what I need it to do. Currently rewriting for integration in another project.
+
 This was written for a local company to save them hours of manually transferring data between .docx and .xlsx formats.
 
 Takes large volumes of (generally formatted--see below) contact info from the clipboard and generates an excel spreadsheet.
