@@ -102,17 +102,18 @@ def infoScrape(sourceDoc):
     return all_companies
 
 
-def get_source(origin):
+def get_source(origin, data): # accepts data; 'remote' = (json string) or 'local' = filepath for .txt with string content
     if origin == 'local':
         # Break the whole document into a giant list of blocks
-        with open(r'./clipboard.txt', 'r') as f:
+        with open(data, 'r') as f:
             sourceDoc = f.read()
-        #sourceDoc = sourceDoc.split('\r#\n\r\n') # was used for libreoffice where there were carriage returns (\r)
+        return sourceDoc
+
     elif origin == 'remote':
-        sourceDoc = get_source('local') #TEMPORARY, this will be replaced with request/AJAX code
-
-    return sourceDoc
-
+        if isinstance(data, str): # this should be a JSON string
+            return data
+        else:
+            return ''
 
 def get_destination(SOURCE):
     if SOURCE == 'local':
@@ -126,10 +127,10 @@ def get_destination(SOURCE):
                 print('Invalid path!')
                 continue
     elif SOURCE == 'remote':
-        get_destination('local')
+        return
 
 
-def generate_wb(): # creates an excel workbook from the initialized companies and returns the wb
+def generate_wb(all_companies): # creates an excel workbook from the initialized companies and returns the wb
     wb = openpyxl.Workbook()
     sheet = wb['Sheet']
 
@@ -182,12 +183,12 @@ def export_wb(SOURCE, wb):
         export_wb('local', wb)
 
 
-sourceDoc = get_source(SOURCE)
-all_companies = infoScrape(sourceDoc)
+def convert_to_wb(origin, data):
+    sourceDoc = get_source(origin, data)
+    all_companies = infoScrape(sourceDoc)
+    finished_wb = generate_wb(all_companies)
+    export_wb(SOURCE, finished_wb)
 
-print('Compiling complete.\n')
-for obj in all_companies:
-    obj.printattrs()
 
-finished_wb = generate_wb()
-export_wb(SOURCE, finished_wb)
+if __name__ == '__main__':
+    convert_to_wb(SOURCE, input("Enter the path of the source file: "))
