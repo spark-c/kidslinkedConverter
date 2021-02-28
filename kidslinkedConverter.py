@@ -12,8 +12,8 @@
 
 import re, pprint, logging, openpyxl, os, sys
 from decouple import config
-from Company import * # defines the "Company" object
-from kidslinked_regex import * # regex definitions
+from .Company import * # defines the "Company" object
+from .kidslinked_regex import * # regex definitions
 
 SOURCE = config('SOURCE') # sets whether the contact info source is local (clipboard.txt) or remote (AJAX)
 if SOURCE not in ['local', 'remote']:
