@@ -11,24 +11,26 @@
 # Format will be Company(0), Name(1), Email(2), Phone(3), Address(4)
 
 import re, pprint, logging, openpyxl, os, sys
+from decouple import config
 from Company import * # defines the "Company" object
 from kidslinked_regex import * # regex definitions
 
+SOURCE = config('SOURCE') # sets whether the contact info source is local (clipboard.txt) or remote (AJAX)
+if SOURCE not in ['local', 'remote']:
+    SOURCE = 'local'
+    print('Environment SOURCE not set correctly! Defaulting to local. (local, remote)')
 
-def infoScrape():
-    i = 1
-    for block in range(len(sourceDoc)):
 
-        Company = 'Company %i' % i
-        print(Company)
-        collectedInfo = {Company: {   # list for temp storage of found data
-                            'name':None}}
+def infoScrape(sourceDoc):
+    all_companies = []
+    sourceDoc = sourceDoc.split('\n\n') # splits on empty lines
+    print('sourcedoc: ' + str(sourceDoc))
+    for block in sourceDoc: # each block is a company's info
+        pprint.pprint('block: ' + str(block))
+        rawData = block.splitlines() # assumes that each line is a different piece of data to be regex'd
+        pprint.pprint('rawdata: ' + str(rawData))
 
-        working = sourceDoc[block]
-
-        rawData = working.splitlines() # assumes that each line is a different piece of data to be regex'd
-
-        #COMPANY
+        #COMPANY NAME
         if len(rawData) < 2: # Deletes empty lists
             del rawData
             continue
@@ -41,7 +43,9 @@ def infoScrape():
             dbaResult = dbaMatch.group(2)
             rawData[0] = dbaResult.strip()
 
-        collectedInfo[Company]['name'] = rawData[0] # assumes that the first line is the company name
+        all_companies.append(Company(rawData[0])) # assumes that the first line is the company name.
+        newComp = all_companies[-1]
+
         del rawData[0]
 
         # NAMES
@@ -50,11 +54,8 @@ def infoScrape():
              if nameRegex.search(item) != None:
                  foundNames.append(item.strip())
 
-        j = 1
-        collectedInfo[Company]['contacts'] = {}
         for person in foundNames:
-            collectedInfo[Company]['contacts']['person %i' % j] = person
-            j += 1
+            newComp.add('contact', person)
 
         # EMAILS
         foundEmails = []
@@ -64,11 +65,8 @@ def infoScrape():
                  emailResult = emailMatch.group(1)
                  foundEmails.append(emailResult.strip())
 
-        j = 1
-        collectedInfo[Company]['emails'] = {}
         for email in foundEmails:
-            collectedInfo[Company]['emails']['email %i' % j] = email
-            j += 1
+            newComp.add('email', email)
 
         # PHONES
         foundPhones = []
@@ -78,11 +76,8 @@ def infoScrape():
                  phoneResult = phoneMatch.group()
                  foundPhones.append(phoneResult.strip())
 
-        j = 1
-        collectedInfo[Company]['phones'] = {}
-        for number in foundPhones:
-            collectedInfo[Company]['phones']['number %i' % j] = number
-            j += 1
+        for phone in foundPhones:
+            newComp.add('phone', phone)
 
         # ADDRESSES
         foundAddress = []
@@ -99,106 +94,100 @@ def infoScrape():
                  foundAddress2 = address2Match.group()
 
         foundAddress = foundAddress1 + ' ' + foundAddress2
+        newComp.add('address', foundAddress.strip())
 
-        collectedInfo[Company]['address'] = foundAddress.strip()
+        if len(newComp.emails) == 0:
+            all_companies.remove(newComp) # if there's no email on file, throw out the object
 
-        if len(foundEmails) != 0:
-            bigDict.update(collectedInfo) # adds found info to the directory
-
-            i += 1
-
-
-if not os.path.isfile('./clipboard.txt'):
-    input('Place text content into ./clipboard.txt\n***Press ENTER to exit***')
-    open('./clipboard.txt', 'a').close()
-    sys.exit()
+    return all_companies
 
 
+def get_source(origin):
+    if origin == 'local':
+        # Break the whole document into a giant list of blocks
+        with open(r'./clipboard.txt', 'r') as f:
+            sourceDoc = f.read()
+        #sourceDoc = sourceDoc.split('\r#\n\r\n') # was used for libreoffice where there were carriage returns (\r)
+    elif origin == 'remote':
+        sourceDoc = get_source('local') #TEMPORARY, this will be replaced with request/AJAX code
 
-bigDict = {} # this is the main directory
+    return sourceDoc
 
 
+def get_destination(SOURCE):
+    if SOURCE == 'local':
+        while True:
+            try:
+                filepath = input('Please enter desired path: ')
+                return filepath
 
-# Break the whole document into a giant list of blocks
+                os.chdir(filepath)
+            except:
+                print('Invalid path!')
+                continue
+    elif SOURCE == 'remote':
+        get_destination('local')
 
-#sourceDoc = pyperclip.paste() ****************THIS DOES NOT WORK ON LINUX?????***************
-with open(r'./clipboard.txt', 'r') as f:
-    sourceDoc = f.read()
 
-#sourceDoc = sourceDoc.split('\r#\n\r\n')
-sourceDoc = sourceDoc.split('\n\n')
+def generate_wb(): # creates an excel workbook from the initialized companies and returns the wb
+    wb = openpyxl.Workbook()
+    sheet = wb['Sheet']
 
-logging.debug('SOURCEDOC...\nSOURCEDOC...')
-logging.debug(pprint.pformat((sourceDoc)))
+    firstRow = {'A1': 'Company', 'B1' : 'Names', 'C1' : 'Emails', 'D1' : 'Phones', 'E1' : 'Address'}
+    for item in firstRow: # writes column labels in first row
+        sheet[item] = firstRow[item]
 
-# Now we process
+    columnkeys = { # this will be used to map obj attrs to the correct column letter
+    'name': 'A',
+    'contacts': 'B',
+    'emails': 'C',
+    'phones': 'D',
+    'address': 'E',
+    }
 
-infoScrape()
+    row_index = 2 # begins at the row under the column titles
+    for obj in all_companies:
+        rows_needed = max( # determines how many rows are needed to display all of this company's info
+            len(obj.contacts),
+            len(obj.phones),
+            len(obj.emails)
+            )
+
+
+        for i in range(rows_needed + 1): # this loop should run as many times as we need rows
+            for key in obj.__dict__:
+                try: # handles out-of-index errors for shorter lists
+                    sheet[columnkeys[key] + str(row_index + i)] = obj.__dict__[key][i] # e.g. sheet['A3'] = obj[key]
+                except:
+                    continue
+        row_index += rows_needed # sets up new starting point for next Company.
+
+    return wb
+
+
+def export_wb(SOURCE, wb):
+    if SOURCE == 'local':
+        sheet_destination = get_destination(SOURCE)
+        while True:
+            try:
+                filename = input('Enter filename: ')
+                if filename[-5:] != '.xlsx':
+                    filename = filename + '.xlsx'
+                wb.save(filename)
+                break
+            except:
+                print('Invalid filename!')
+                continue
+    elif SOURCE == 'remote':
+        export_wb('local', wb)
+
+
+sourceDoc = get_source(SOURCE)
+all_companies = infoScrape(sourceDoc)
 
 print('Compiling complete.\n')
+for obj in all_companies:
+    obj.printattrs()
 
-
-#bigListDebugPrint()
-
-#########EXCEL CODE BELOW
-
-while True:
-    try:
-        desiredPath = input('Please enter desired path: ')
-        os.chdir(desiredPath)
-        break
-    except:
-        print('Invalid path!')
-        continue
-
-
-wb = openpyxl.Workbook()
-sheet = wb['Sheet']
-
-firstRow = {'A1': 'Company', 'B1' : 'Names', 'C1' : 'Emails', 'D1' : 'Phones', 'E1' : 'Address'}
-
-for item in firstRow:
-    sheet[item] = firstRow[item]
-
-rowIndex = 2 # begins at the row under the column titles
-i = 1
-for Company in bigDict:
-
-    working = 'Company %s' % i
-    contactsize = len(bigDict[working]['contacts'])     #determines how many rows
-    phonesize = len(bigDict[working]['phones'])         #are needed to display
-    emailsize = len(bigDict[working]['emails'])         #all of this company's info
-    rowsneeded = max(contactsize, phonesize, emailsize)
-
-    sheet['A%s' % rowIndex] = bigDict[working]['name']
-
-    j = 0
-    for person in bigDict[working]['contacts']:
-        sheet['B%s' % str(rowIndex + j)] = bigDict[working]['contacts']['person %s' % str(j+1)]
-        j += 1
-
-    j = 0
-    for email in bigDict[working]['emails']:
-        sheet['C%s' % str(rowIndex + j)] = bigDict[working]['emails']['email %s' % str(j+1)]
-        j += 1
-
-    j = 0
-    for number in bigDict[working]['phones']:
-        sheet['D%s' % str(rowIndex + j)] = bigDict[working]['phones']['number %s' % str(j+1)]
-        j += 1
-
-    sheet['E%s' % str(rowIndex)] = bigDict[working]['address']
-
-    rowIndex = rowIndex + rowsneeded # moves "cursor" to next empty row
-    i += 1
-
-while True:
-    try:
-        filename = input('Enter filename: ')
-        if filename[-5:] != '.xlsx':
-            filename = filename + '.xlsx'
-        wb.save(filename)
-        break
-    except:
-        print('Invalid filename!')
-        continue
+finished_wb = generate_wb()
+export_wb(SOURCE, finished_wb)

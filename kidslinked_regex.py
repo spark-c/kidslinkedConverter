@@ -1,3 +1,5 @@
+import re
+
 # REGEX DEFINITIONS for kidslinkedConverter script
 
 # NAME
