@@ -10,7 +10,7 @@
 
 # Format will be Company(0), Name(1), Email(2), Phone(3), Address(4)
 
-import re, pprint, logging, openpyxl, os, sys
+import re, pprint, logging, openpyxl, os, sys, json
 from decouple import config
 from .Company import * # defines the "Company" object
 from .kidslinked_regex import * # regex definitions
@@ -23,7 +23,10 @@ if SOURCE not in ['local', 'remote']:
 
 def infoScrape(sourceDoc):
     all_companies = []
-    sourceDoc = sourceDoc.split('\n\n') # splits on empty lines
+    try: # in case the sourceDoc does not have an empty line
+        sourceDoc = sourceDoc.split('\n\n') # splits on empty lines
+    except:
+        sourceDoc = sourceDoc # do nothing
     print('sourcedoc: ' + str(sourceDoc))
     for block in sourceDoc: # each block is a company's info
         pprint.pprint('block: ' + str(block))
@@ -110,10 +113,7 @@ def get_source(origin, data): # accepts data; 'remote' = (json string) or 'local
         return sourceDoc
 
     elif origin == 'remote':
-        if isinstance(data, str): # this should be a JSON string
-            return data
-        else:
-            return ''
+        return data['message']
 
 def get_destination(SOURCE):
     if SOURCE == 'local':
@@ -181,6 +181,13 @@ def export_wb(SOURCE, wb):
                 continue
     elif SOURCE == 'remote':
         export_wb('local', wb)
+
+
+def compile_for_remote(data): # data should be a request, {'message': string_to_convert}
+    sourceDoc = get_source('remote', data)
+    company_objects = [obj.__dict__ for obj in infoScrape(sourceDoc)] # list comprehension
+
+    return company_objects
 
 
 def convert_to_wb(origin, data):
