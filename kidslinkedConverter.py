@@ -115,19 +115,17 @@ def get_source(origin, data): # accepts data; 'remote' = (json string) or 'local
     elif origin == 'remote':
         return data['message']
 
-def get_destination(SOURCE):
+def get_destination(dest_path):
     if SOURCE == 'local':
         while True:
             try:
                 filepath = input('Please enter desired path: ')
                 return filepath
-
-                os.chdir(filepath)
             except:
                 print('Invalid path!')
                 continue
     elif SOURCE == 'remote':
-        return
+        return dest_path
 
 
 def generate_wb(all_companies): # creates an excel workbook from the initialized companies and returns the wb
@@ -166,21 +164,27 @@ def generate_wb(all_companies): # creates an excel workbook from the initialized
     return wb
 
 
-def export_wb(SOURCE, wb):
+def export_wb(dest_path, wb, doc_title='Conversion untitled'):
     if SOURCE == 'local':
         sheet_destination = get_destination(SOURCE)
         while True:
             try:
-                filename = input('Enter filename: ')
-                if filename[-5:] != '.xlsx':
-                    filename = filename + '.xlsx'
-                wb.save(filename)
+                doc_title = input('Enter filename: ')
+                if doc_title[-5:] != '.xlsx':
+                    doc_title = doc_title + '.xlsx'
+                wb.save(doc_title)
                 break
             except:
                 print('Invalid filename!')
                 continue
     elif SOURCE == 'remote':
-        export_wb('local', wb)
+        # export_wb('local', wb)
+        try:
+            sheet_destination = get_destination(dest_path)
+            wb.save(dest_path + doc_title)
+# READ https://openpyxl.readthedocs.io/en/stable/tutorial.html search SAVING AS A STREAM
+        except:
+
 
 
 def compile_for_remote(data): # data should be a request, {'message': string_to_convert}
@@ -190,11 +194,12 @@ def compile_for_remote(data): # data should be a request, {'message': string_to_
     return company_objects
 
 
-def convert_to_wb(origin, data):
-    sourceDoc = get_source(origin, data)
-    all_companies = infoScrape(sourceDoc)
-    finished_wb = generate_wb(all_companies)
-    export_wb(SOURCE, finished_wb)
+def convert_to_wb(dest_path, company_objs, doc_title): # takes a list of company objects i.e. session['all_companies']
+    if origin == 'remote':
+        # sourceDoc = get_source(origin, data)
+        # all_companies = infoScrape(sourceDoc)
+        finished_wb = generate_wb(company_objs)
+        export_wb(dest_path, finished_wb, doc_title)
 
 
 if __name__ == '__main__':
