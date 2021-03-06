@@ -115,17 +115,17 @@ def get_source(origin, data): # accepts data; 'remote' = (json string) or 'local
     elif origin == 'remote':
         return data['message']
 
-def get_destination(dest_path):
-    if SOURCE == 'local':
-        while True:
-            try:
-                filepath = input('Please enter desired path: ')
-                return filepath
-            except:
-                print('Invalid path!')
-                continue
-    elif SOURCE == 'remote':
-        return dest_path
+# def get_destination(dest_path):
+#     if SOURCE == 'local':
+#         while True:
+#             try:
+#                 filepath = input('Please enter desired path: ')
+#                 return filepath
+#             except:
+#                 print('Invalid path!')
+#                 continue
+#     elif SOURCE == 'remote':
+#         return dest_path
 
 
 def generate_wb(all_companies): # creates an excel workbook from the initialized companies and returns the wb
@@ -147,16 +147,16 @@ def generate_wb(all_companies): # creates an excel workbook from the initialized
     row_index = 2 # begins at the row under the column titles
     for obj in all_companies:
         rows_needed = max( # determines how many rows are needed to display all of this company's info
-            len(obj.contacts),
-            len(obj.phones),
-            len(obj.emails)
+            len(obj['contacts']),
+            len(obj['phones']),
+            len(obj['emails'])
             )
 
 
         for i in range(rows_needed + 1): # this loop should run as many times as we need rows
-            for key in obj.__dict__:
+            for key in obj:
                 try: # handles out-of-index errors for shorter lists
-                    sheet[columnkeys[key] + str(row_index + i)] = obj.__dict__[key][i] # e.g. sheet['A3'] = obj[key]
+                    sheet[columnkeys[key] + str(row_index + i)] = obj[key][i] # e.g. sheet['A3'] = obj[key]
                 except:
                     continue
         row_index += rows_needed # sets up new starting point for next Company.
@@ -165,25 +165,26 @@ def generate_wb(all_companies): # creates an excel workbook from the initialized
 
 
 def export_wb(dest_path, wb, doc_title='Conversion untitled'):
-    if SOURCE == 'local':
-        sheet_destination = get_destination(SOURCE)
-        while True:
-            try:
-                doc_title = input('Enter filename: ')
-                if doc_title[-5:] != '.xlsx':
-                    doc_title = doc_title + '.xlsx'
-                wb.save(doc_title)
-                break
-            except:
-                print('Invalid filename!')
-                continue
-    elif SOURCE == 'remote':
-        # export_wb('local', wb)
-        try:
-            sheet_destination = get_destination(dest_path)
-            wb.save(dest_path + doc_title)
-# READ https://openpyxl.readthedocs.io/en/stable/tutorial.html search SAVING AS A STREAM
-        except:
+    pass
+#     if SOURCE == 'local':
+#         sheet_destination = get_destination(SOURCE)
+#         while True:
+#             try:
+#                 doc_title = input('Enter filename: ')
+#                 if doc_title[-5:] != '.xlsx':
+#                     doc_title = doc_title + '.xlsx'
+#                 wb.save(doc_title)
+#                 break
+#             except:
+#                 print('Invalid filename!')
+#                 continue
+#     elif SOURCE == 'remote':
+#         # export_wb('local', wb)
+#         try:
+#             sheet_destination = get_destination(dest_path)
+#             wb.save(dest_path + doc_title)
+# # READ https://openpyxl.readthedocs.io/en/stable/tutorial.html search SAVING AS A STREAM
+#         except:
 
 
 
@@ -194,12 +195,11 @@ def compile_for_remote(data): # data should be a request, {'message': string_to_
     return company_objects
 
 
-def convert_to_wb(dest_path, company_objs, doc_title): # takes a list of company objects i.e. session['all_companies']
-    if origin == 'remote':
-        # sourceDoc = get_source(origin, data)
-        # all_companies = infoScrape(sourceDoc)
-        finished_wb = generate_wb(company_objs)
-        export_wb(dest_path, finished_wb, doc_title)
+# def convert_to_wb(dest_path, company_objs, doc_title): # takes a list of company objects i.e. session['all_companies']
+#     # sourceDoc = get_source(origin, data)
+#     # all_companies = infoScrape(sourceDoc)
+#     finished_wb = generate_wb(company_objs)
+#     export_wb(dest_path, finished_wb, doc_title)
 
 
 if __name__ == '__main__':
