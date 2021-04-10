@@ -10,7 +10,7 @@
 
 # Format will be Company(0), Name(1), Email(2), Phone(3), Address(4)
 
-import re, pprint, logging, openpyxl, os, sys
+import re, pprint, logging, openpyxl, os, sys, json
 from decouple import config
 from .Company import * # defines the "Company" object
 from .kidslinked_regex import * # regex definitions
@@ -24,6 +24,11 @@ if SOURCE not in ['local', 'remote']:
 def infoScrape(sourceDoc):
     all_companies = []
     sourceDoc = sourceDoc.split('\n\n') # splits on empty lines
+    # print('sourcedoc: ' + str(sourceDoc))
+    try: # in case the sourceDoc does not have an empty line
+        sourceDoc = sourceDoc.split('\n\n') # splits on empty lines
+    except:
+        sourceDoc = sourceDoc # do nothing
     # print('sourcedoc: ' + str(sourceDoc))
     for block in sourceDoc: # each block is a company's info
         # pprint.pprint('block: ' + str(block))
@@ -110,24 +115,19 @@ def get_source(origin, data): # accepts data; 'remote' = (json string) or 'local
         return sourceDoc
 
     elif origin == 'remote':
-        if isinstance(data, str): # this should be a JSON string
-            return data
-        else:
-            return ''
+        return data['message']
 
-def get_destination(SOURCE):
-    if SOURCE == 'local':
-        while True:
-            try:
-                filepath = input('Please enter desired path: ')
-                return filepath
-
-                os.chdir(filepath)
-            except:
-                print('Invalid path!')
-                continue
-    elif SOURCE == 'remote':
-        return
+# def get_destination(dest_path):
+#     if SOURCE == 'local':
+#         while True:
+#             try:
+#                 filepath = input('Please enter desired path: ')
+#                 return filepath
+#             except:
+#                 print('Invalid path!')
+#                 continue
+#     elif SOURCE == 'remote':
+#         return dest_path
 
 
 def generate_wb(all_companies): # creates an excel workbook from the initialized companies and returns the wb
@@ -149,16 +149,16 @@ def generate_wb(all_companies): # creates an excel workbook from the initialized
     row_index = 2 # begins at the row under the column titles
     for obj in all_companies:
         rows_needed = max( # determines how many rows are needed to display all of this company's info
-            len(obj.contacts),
-            len(obj.phones),
-            len(obj.emails)
+            len(obj['contacts']),
+            len(obj['phones']),
+            len(obj['emails'])
             )
 
 
         for i in range(rows_needed + 1): # this loop should run as many times as we need rows
-            for key in obj.__dict__:
+            for key in obj:
                 try: # handles out-of-index errors for shorter lists
-                    sheet[columnkeys[key] + str(row_index + i)] = obj.__dict__[key][i] # e.g. sheet['A3'] = obj[key]
+                    sheet[columnkeys[key] + str(row_index + i)] = obj[key][i] # e.g. sheet['A3'] = obj[key]
                 except:
                     continue
         row_index += rows_needed # sets up new starting point for next Company.
@@ -166,28 +166,42 @@ def generate_wb(all_companies): # creates an excel workbook from the initialized
     return wb
 
 
-def export_wb(SOURCE, wb):
-    if SOURCE == 'local':
-        sheet_destination = get_destination(SOURCE)
-        while True:
-            try:
-                filename = input('Enter filename: ')
-                if filename[-5:] != '.xlsx':
-                    filename = filename + '.xlsx'
-                wb.save(filename)
-                break
-            except:
-                print('Invalid filename!')
-                continue
-    elif SOURCE == 'remote':
-        export_wb('local', wb)
+def export_wb(dest_path, wb, doc_title='Conversion untitled'):
+    pass
+#     if SOURCE == 'local':
+#         sheet_destination = get_destination(SOURCE)
+#         while True:
+#             try:
+#                 doc_title = input('Enter filename: ')
+#                 if doc_title[-5:] != '.xlsx':
+#                     doc_title = doc_title + '.xlsx'
+#                 wb.save(doc_title)
+#                 break
+#             except:
+#                 print('Invalid filename!')
+#                 continue
+#     elif SOURCE == 'remote':
+#         # export_wb('local', wb)
+#         try:
+#             sheet_destination = get_destination(dest_path)
+#             wb.save(dest_path + doc_title)
+# # READ https://openpyxl.readthedocs.io/en/stable/tutorial.html search SAVING AS A STREAM
+#         except:
 
 
-def convert_to_wb(origin, data):
-    sourceDoc = get_source(origin, data)
-    all_companies = infoScrape(sourceDoc)
-    finished_wb = generate_wb(all_companies)
-    export_wb(SOURCE, finished_wb)
+
+def compile_for_remote(data): # data should be a request, {'message': string_to_convert}
+    sourceDoc = get_source('remote', data)
+    company_objects = [obj.__dict__ for obj in infoScrape(sourceDoc)] # list comprehension
+
+    return company_objects
+
+
+# def convert_to_wb(dest_path, company_objs, doc_title): # takes a list of company objects i.e. session['all_companies']
+#     # sourceDoc = get_source(origin, data)
+#     # all_companies = infoScrape(sourceDoc)
+#     finished_wb = generate_wb(company_objs)
+#     export_wb(dest_path, finished_wb, doc_title)
 
 
 if __name__ == '__main__':
