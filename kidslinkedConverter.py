@@ -24,11 +24,11 @@ if SOURCE not in ['local', 'remote']:
 def infoScrape(sourceDoc):
     all_companies = []
     sourceDoc = sourceDoc.split('\n\n') # splits on empty lines
-    print('sourcedoc: ' + str(sourceDoc))
+    # print('sourcedoc: ' + str(sourceDoc))
     for block in sourceDoc: # each block is a company's info
-        pprint.pprint('block: ' + str(block))
+        # pprint.pprint('block: ' + str(block))
         rawData = block.splitlines() # assumes that each line is a different piece of data to be regex'd
-        pprint.pprint('rawdata: ' + str(rawData))
+        # pprint.pprint('rawdata: ' + str(rawData))
 
         #COMPANY NAME
         if len(rawData) < 2: # Deletes empty lists
